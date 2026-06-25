@@ -20,7 +20,7 @@ model SimulacionStockMensual
   // ==========================================
   // POLÍTICA DE COMPRA (Escenario A vs Escenario B)
   // ==========================================
-  parameter Boolean usar_stock_maximo = false
+  parameter Boolean usar_stock_maximo = true
     "false = Escenario A: compra ajustada al consumo (min(consumo, stock_max)). 
      true  = Escenario B: compra siempre igual al stock máximo, sin importar el consumo.";
 
@@ -35,6 +35,7 @@ model SimulacionStockMensual
   parameter Real presto_rvc_min = 1.230;
   parameter Real presto_rvc_max = 5.405;
   parameter Real presto_stock_max = 600;
+  parameter Real indice_velocidad = 0.004;
   //parameter Real presto_costo_base = 150;
 
   // ==========================================
@@ -63,6 +64,8 @@ model SimulacionStockMensual
   //Real presto_precio_venta;
   Real presto_compra_mensual;
   Real presto_ingreso_mensual;    //ingreso mensual de Prestobarbas
+  Real eficiencia_inversion_presto;
+  Real eficiencia_inversion_lib;
 
   //Real ingreso_total_mensual;     //ingreso total del período
 
@@ -95,40 +98,26 @@ algorithm
 equation
   // ==========================================
   // ECUACIONES DEL NEGOCIO
-  // ==========================================
-
-//  // --- LÓGICA PARA LIBRERÍA ---
-//  libreria_consumo = max(0, 1000 + ruido_libreria);
-//  libreria_rvc = max(libreria_rvc_min, min(libreria_rvc_max, 1.0 + (libreria_consumo * 0.005)));
-//  libreria_precio_venta = libreria_rvc * libreria_costo_base;
-//  libreria_compra_mensual = if usar_stock_maximo then libreria_stock_max else min(libreria_consumo, libreria_stock_max);
-//  libreria_ingreso_mensual = libreria_compra_mensual * libreria_precio_venta; 
-
-//  // --- LÓGICA PARA PRESTOBARBAS ---
-//  presto_consumo = max(0, 300 + ruido_presto);
-//  presto_rvc = max(presto_rvc_min, min(presto_rvc_max, 1.0 + (presto_consumo * 0.008)));
-//  presto_precio_venta = presto_rvc * presto_costo_base;
-//  presto_compra_mensual = if usar_stock_maximo then presto_stock_max else min(presto_consumo, presto_stock_max);
-//  presto_ingreso_mensual = presto_compra_mensual * presto_precio_venta;    
+  // ==========================================  
 
 // --- LÓGICA PARA LIBRERÍA ---
   libreria_consumo = max(0, 1000 + ruido_libreria);
-  libreria_rvc = max(libreria_rvc_min, min(libreria_rvc_max, 1.0 + (libreria_consumo * 0.005)));
+  libreria_rvc = max(libreria_rvc_min, min(libreria_rvc_max, 1.0 + (libreria_consumo * indice_velocidad)));
   
   libreria_compra_mensual = if usar_stock_maximo then libreria_stock_max else min(libreria_consumo, libreria_stock_max);
   
   // El ingreso se mide en "Unidades de Costo" recuperadas
-  libreria_ingreso_mensual = min(libreria_consumo, libreria_stock_max) * libreria_rvc; 
+  libreria_ingreso_mensual = min(libreria_consumo, libreria_stock_max) * libreria_rvc;
+  eficiencia_inversion_lib = libreria_ingreso_mensual / libreria_compra_mensual; 
 
   // --- LÓGICA PARA PRESTOBARBAS ---
   presto_consumo = max(0, 300 + ruido_presto);
-  presto_rvc = max(presto_rvc_min, min(presto_rvc_max, 1.0 + (presto_consumo * 0.008)));
+  presto_rvc = max(presto_rvc_min, min(presto_rvc_max, 1.0 + (presto_consumo * indice_velocidad)));
   
   presto_compra_mensual = if usar_stock_maximo then presto_stock_max else min(presto_consumo, presto_stock_max);
   
   presto_ingreso_mensual = min(presto_consumo, presto_stock_max) * presto_rvc;
-
-  // --- TOTAL CONSOLIDADO ---
- // ingreso_total_mensual = libreria_ingreso_mensual + presto_ingreso_mensual;
+  
+  eficiencia_inversion_presto = presto_ingreso_mensual / presto_compra_mensual;
 
 end SimulacionStockMensual;
